@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, {useEffect, useRef} from 'react';
 import PropTypes from 'prop-types';
 import { Map as BaseMap, TileLayer, ZoomControl } from 'react-leaflet';
 
@@ -7,6 +7,26 @@ import { isDomAvailable } from 'lib/util';
 
 const DEFAULT_MAP_SERVICE = 'OpenStreetMap';
 
+function useInterval(callback, delay) {
+  const savedCallback = useRef();
+
+  // Remember the latest callback.
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
+
+  // Set up the interval.
+  useEffect(() => {
+    function tick() {
+      savedCallback.current();
+    }
+    if (delay !== null) {
+      let id = setInterval(tick, delay);
+      return () => clearInterval(id);
+    }
+  }, [delay]);
+}
+
 const Map = ( props ) => {
   const { children, className, defaultBaseMap = DEFAULT_MAP_SERVICE, mapEffect, ...rest } = props;
 
@@ -14,10 +34,12 @@ const Map = ( props ) => {
 
   useConfigureLeaflet();
 
-  useRefEffect({
-    ref: mapRef,
-    effect: mapEffect,
-  });
+  const useRefEffect = ({ effect, ref = {} }) => {
+    useEffect(() => {
+      effect( ref.current );
+    }, [ref]);
+  };
+  useInterval(()  =>  mapEffect(mapRef.current),2000);
 
   const services = useMapServices({
     names: [...new Set([defaultBaseMap, DEFAULT_MAP_SERVICE])],
